@@ -77,7 +77,7 @@ Trained exclusively on 140,000+ normal HTTP sensor records, **no labelled attack
 | Port Scan | ~3,000 | 93% |
 | **Overall** | **35,500** | **98.3%** |
 
-![IDS Results](ids_results.png)
+![IDS Results](pics/ids_results.png)
 
 ---
 
@@ -104,9 +104,9 @@ A hybrid CNN-LSTM trained on radio telemetry collected from SX1262-equipped Pico
 
 **Results:** 60% attack recall · 4.5% false positive rate · AUC ~0.80
 
-![CNN-LSTM Training](lora_training.png)
-![CNN-LSTM Confusion Matrix](lora_confusion.png)
-![Threshold Sweep](lora_threshold.png)
+![CNN-LSTM Training](pics/lora_training.png)
+![CNN-LSTM Confusion Matrix](pics/lora_confusion.png)
+![Threshold Sweep](pics/lora_threshold.png)
 
 ---
 
@@ -305,13 +305,13 @@ BATCH_SIZE  = 64
 
 The IDS engine prints a color-coded real-time dashboard showing per-request status, anomaly scores, strike counts, and running allow/block/ban totals.
 
-![Normal traffic](normal_traffic.png)
+![Normal traffic](pics/normal_traffic.png)
 *Normal operation — all sensor requests pass with positive anomaly scores*
 
-![Slowloris detection](slowloris_detection.png)
+![Slowloris detection](pics/slowloris_detection.png)
 *Slow Loris attack — connection flood triggers strike accumulation and IP ban*
 
-![BiLSTM and LoRa](bilstm_lora.png)
+![BiLSTM and LoRa](pics/bilstm_lora.png)
 *BiLSTM + CNN-LSTM active — LoRa attack packets flagged alongside HTTP anomalies*
 
 ---
