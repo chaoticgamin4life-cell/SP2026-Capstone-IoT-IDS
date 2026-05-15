@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""
+lora_server.py — Standalone LoRa data collection server for Raspberry Pi
+
+Runs a lightweight Flask server that receives LoRa packet data forwarded
+from the receiver Pico (r_pico_lora.py) and saves it to two JSON files:
+    lora_normal_data.json  — packets with M=0 (normal)
+    lora_attack_data.json  — packets with M=1 (attack/malicious)
+
+These files are used directly by train_model_windows.py to retrain the
+IsolationForest model with LoRa radio features.
+
+Run:
+    python3 lora_server.py
+    python3 lora_server.py --host 10.42.0.1 --port 80
+"""
+
+import json
+import argparse
+import logging
+from datetime import datetime
+from flask import Flask, request, jsonify
+
+# ── Config ────────────────────────────────────────────────────────────────────
+HOST              = '0.0.0.0'
+PORT              = 80
+NORMAL_FILE       = 'lora_normal_data.json'
+ATTACK_FILE       = 'lora_attack_data.json'
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s  %(levelname)-8s  %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+)
+log = logging.getLogger('LoRa')
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
+# ── Counters ──────────────────────────────────────────────────────────────────
+counts = {'normal': 0, 'attack': 0}
+
+# ── Flask app ─────────────────────────────────────────────────────────────────
+app = Flask(__name__)
+
+
+@app.route('/lora', methods=['POST'])
+def lora():
+    data  = request.get_json(silent=True, force=True) or {}
+    label = int(data.get('label', 0))
+    ts    = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    entry = {
+        'timestamp': ts,
+        'ts':        data.get('ts',   0),
+        'dt':        data.get('dt',   0),
+        'rssi':      data.get('rssi', 0),
+        'snr':       data.get('snr',  0),
+        'label':     'lora_attack' if label == 1 else 'normal',
+    }
+
+    if label == 1:
+        outfile = ATTACK_FILE
+        counts['attack'] += 1
+        log.warning(f"ATTACK  RSSI={entry['rssi']:>5}  SNR={entry['snr']:>5}  "
+                    f"DT={entry['dt']:>6}  total={counts['attack']}")
+    else:
+        outfile = NORMAL_FILE
+        counts['normal'] += 1
+        log.info(f"NORMAL  RSSI={entry['rssi']:>5}  SNR={entry['snr']:>5}  "
+                 f"DT={entry['dt']:>6}  total={counts['normal']}")
+
+    with open(outfile, 'a') as f:
+        f.write(json.dumps(entry) + '\n')
+
+    return jsonify({'status': 'ok'}), 200
+
+
+@app.route('/status', methods=['GET'])
+def status():
+    return jsonify({
+        'status':       'running',
+        'normal_saved': counts['normal'],
+        'attack_saved': counts['attack'],
+        'normal_file':  NORMAL_FILE,
+        'attack_file':  ATTACK_FILE,
+    }), 200
+
+
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({'service': 'LoRa data collection server'}), 200
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(description="LoRa data collection server")
+    parser.add_argument('--host',         default=HOST)
+    parser.add_argument('--port',         type=int, default=PORT)
+    parser.add_argument('--normal-file',  default=NORMAL_FILE)
+... (23 lines left)
